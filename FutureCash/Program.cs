@@ -66,6 +66,12 @@ namespace FutureCash
             {
                 return a.CompareTo(b) > 0;
             }
+
+            public string ToHex()
+            {
+                var format = "X16";
+                return A.ToString(format) + B.ToString(format) + C.ToString(format) + D.ToString(format);
+            }
         }
 
         class Hash
@@ -122,9 +128,11 @@ namespace FutureCash
         static void Main(string[] args)
         {
             var block = new Block();
-            block.Mine(new UInt256(ulong.MaxValue / 32, ulong.MaxValue, ulong.MaxValue, ulong.MaxValue));
+            var maxHash = new UInt256(ulong.MaxValue / 32, ulong.MaxValue, ulong.MaxValue, ulong.MaxValue);
+            Console.WriteLine("MaxHash: " + maxHash.ToHex());
+            block.Mine(maxHash);
             Console.WriteLine(block.Nonce);
-            Console.WriteLine(block.BlockHash);
+            Console.WriteLine(block.BlockHash.ToHex());
             Console.ReadKey();
         }
     }
