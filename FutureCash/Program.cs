@@ -71,7 +71,7 @@ namespace FutureCash
         static void Main(string[] args)
         {
             var block = new Block();
-            block.Mine(Int256.MaxValue);
+            block.Mine(Int64.MaxValue);
             Console.WriteLine(block.Nonce);
             Console.WriteLine(block.BlockHash);
             Console.ReadKey();
