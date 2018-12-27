@@ -12,13 +12,31 @@ namespace FutureCash
 {
     class Program
     {
+        class Hash
+        {
+            private static SHA256 sha256 = SHA256.Create();
+
+            public static Int256 Sha256d(byte[] buffer)
+            {
+                return ExtendedBitConverter.ToInt256(sha256.ComputeHash(sha256.ComputeHash(buffer)));
+            }
+        }
+
         class Block
         {
-            public long nonce;
+            public long Nonce;
+
+            private Object SerializableRepresentation
+            {
+                get
+                {
+                    return new { Nonce = Nonce };
+                }
+            }
 
             public string Serialize()
             {
-                return JsonConvert.SerializeObject(this);
+                return JsonConvert.SerializeObject(SerializableRepresentation);
             }
 
             public override string ToString()
@@ -26,56 +44,36 @@ namespace FutureCash
                 return Serialize();
             }
 
-            public byte[] Mine(Hasher hasher, Int256 difficulty)
+            public Int256 BlockHash
             {
-                nonce = 0;
-                var buffer = Encoding.UTF8.GetBytes(Serialize());
-                var hash = hasher.Sha256d(buffer);
-                var hash256 = ExtendedBitConverter.ToInt256(hash);
-                while (hash256 > difficulty)
+                get
                 {
-                    nonce++;
-                    buffer = Encoding.UTF8.GetBytes(Serialize());
-                    hash = hasher.Sha256d(buffer);
-                    hash256 = ExtendedBitConverter.ToInt256(hash);
-                }
-
-                return hash;
-            }
-        }
-
-        class Hasher : IDisposable
-        {
-            private SHA256 sha256 = SHA256.Create();
-
-            protected virtual void Dispose(bool disposing)
-            {
-                if (disposing)
-                {
-                    sha256.Dispose();
+                    var buffer = Encoding.UTF8.GetBytes(Serialize());
+                    return Hash.Sha256d(buffer);
                 }
             }
 
-            public void Dispose()
+            public void Mine(Int256 maxHash, long startingNonce = 0)
             {
-                Dispose(true);
-            }
-
-            public byte[] Sha256d(byte[] buffer)
-            {
-                return sha256.ComputeHash(sha256.ComputeHash(buffer));
+                Console.WriteLine("MaxHash: " + maxHash);
+                Nonce = startingNonce;
+                while (BlockHash > maxHash)
+                {
+                    Console.WriteLine("Nonce: " + Nonce);
+                    Console.WriteLine("BlockHash: " + BlockHash);
+                    Nonce++;
+                }
+                Console.WriteLine("Nonce: " + Nonce);
+                Console.WriteLine("BlockHash: " + BlockHash);
             }
         }
 
         static void Main(string[] args)
         {
             var block = new Block();
-            using (var hasher = new Hasher())
-            {
-                var hash = block.Mine(hasher, new Int256(Int128.MaxValue));
-                Console.WriteLine(block.nonce);
-                Console.WriteLine(BitConverter.ToString(hash));
-            }
+            block.Mine(Int256.MaxValue);
+            Console.WriteLine(block.Nonce);
+            Console.WriteLine(block.BlockHash);
             Console.ReadKey();
         }
     }
