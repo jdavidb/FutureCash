@@ -26,6 +26,7 @@ namespace FutureCash
             }
 
             public static UInt256 MaxValue = new UInt256(ulong.MaxValue, ulong.MaxValue, ulong.MaxValue, ulong.MaxValue);
+            public static UInt256 MinValue = new UInt256(0, 0, 0, 0);
 
             public UInt256(byte[] value, int startIndex = 0)
             {
@@ -69,7 +70,7 @@ namespace FutureCash
 
             public string ToHex()
             {
-                var format = "X16";
+                var format = "x16";
                 return A.ToString(format) + B.ToString(format) + C.ToString(format) + D.ToString(format);
             }
         }
@@ -87,12 +88,13 @@ namespace FutureCash
         class Block
         {
             public long Nonce;
+            public UInt256 ParentBlockHash;
 
             private Object SerializableRepresentation
             {
                 get
                 {
-                    return new { Nonce = Nonce };
+                    return new { Nonce = Nonce , ParentBlockHash = ParentBlockHash.ToHex()};
                 }
             }
 
@@ -127,12 +129,25 @@ namespace FutureCash
 
         static void Main(string[] args)
         {
-            var block = new Block();
             var maxHash = new UInt256(ulong.MaxValue / 8192, ulong.MaxValue, ulong.MaxValue, ulong.MaxValue);
             Console.WriteLine("MaxHash: " + maxHash.ToHex());
-            block.Mine(maxHash);
-            Console.WriteLine(block.Nonce);
-            Console.WriteLine(block.BlockHash.ToHex());
+
+            var block = new Block();
+            block.ParentBlockHash = UInt256.MinValue;
+
+            for (int i = 0; i < 5; i++)
+            {
+                Console.WriteLine();
+
+                block.Mine(maxHash);
+                Console.WriteLine("Height: " + i);
+                Console.WriteLine("Nonce: " + block.Nonce);
+                Console.WriteLine("Hash: " + block.BlockHash.ToHex());
+
+                var oldBlock = block;
+                block = new Block();
+                block.ParentBlockHash = oldBlock.BlockHash;
+            }
             Console.ReadKey();
         }
     }
