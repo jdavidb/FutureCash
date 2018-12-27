@@ -89,12 +89,18 @@ namespace FutureCash
         {
             public long Nonce;
             public UInt256 ParentBlockHash;
+            public DateTime Time = DateTime.UtcNow;
 
             private Object SerializableRepresentation
             {
                 get
                 {
-                    return new { Nonce = Nonce , ParentBlockHash = ParentBlockHash.ToHex()};
+                    return new
+                    {
+                        Nonce = Nonce,
+                        ParentBlockHash = ParentBlockHash.ToHex(),
+                        Time = Time.ToString("o")
+                    };
                 }
             }
 
