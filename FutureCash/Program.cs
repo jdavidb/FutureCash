@@ -135,7 +135,7 @@ namespace FutureCash
             var block = new Block();
             block.ParentBlockHash = UInt256.MinValue;
 
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < 10; i++)
             {
                 Console.WriteLine();
 
@@ -143,6 +143,7 @@ namespace FutureCash
                 Console.WriteLine("Height: " + i);
                 Console.WriteLine("Nonce: " + block.Nonce);
                 Console.WriteLine("Hash: " + block.BlockHash.ToHex());
+                Console.WriteLine("Block: " + block.ToString());
 
                 var oldBlock = block;
                 block = new Block();
