@@ -128,7 +128,7 @@ namespace FutureCash
         static void Main(string[] args)
         {
             var block = new Block();
-            var maxHash = new UInt256(ulong.MaxValue / 32, ulong.MaxValue, ulong.MaxValue, ulong.MaxValue);
+            var maxHash = new UInt256(ulong.MaxValue / 8192, ulong.MaxValue, ulong.MaxValue, ulong.MaxValue);
             Console.WriteLine("MaxHash: " + maxHash.ToHex());
             block.Mine(maxHash);
             Console.WriteLine(block.Nonce);
