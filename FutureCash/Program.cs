@@ -12,13 +12,71 @@ namespace FutureCash
 {
     class Program
     {
+        class UInt256 : IComparable<UInt256>
+        {
+            private ulong A;
+            private ulong B;
+            private ulong C;
+            private ulong D;
+
+            public UInt256(ulong a, ulong b, ulong c, ulong d)
+            {
+                A = a;
+                B = b;
+                C = c;
+                D = d;
+            }
+
+            public static UInt256 MaxValue = new UInt256(ulong.MaxValue, ulong.MaxValue, ulong.MaxValue, ulong.MaxValue);
+
+            public UInt256(byte[] value, int startIndex = 0)
+            {
+                A = BitConverter.ToUInt64(value, startIndex);
+                B = BitConverter.ToUInt64(value, startIndex + 4);
+                C = BitConverter.ToUInt64(value, startIndex + 8);
+                D = BitConverter.ToUInt64(value, startIndex + 12);
+            }
+
+            public override string ToString()
+            {
+                return A.ToString() + B.ToString() + C.ToString() + D.ToString();
+            }
+
+            public int CompareTo(UInt256 other)
+            {
+                if (A < other.A)
+                    return -1;
+                if (A > other.A)
+                    return 1;
+                if (B < other.B)
+                    return -1;
+                if (B > other.B)
+                    return 1;
+                if (C < other.C)
+                    return -1;
+                if (C > other.C)
+                    return 1;
+                return D.CompareTo(other.D);
+            }
+
+            public static bool operator <(UInt256 a, UInt256 b)
+            {
+                return a.CompareTo(b) < 0;
+            }
+
+            public static bool operator >(UInt256 a, UInt256 b)
+            {
+                return a.CompareTo(b) > 0;
+            }
+        }
+
         class Hash
         {
             private static SHA256 sha256 = SHA256.Create();
 
-            public static Int256 Sha256d(byte[] buffer)
+            public static UInt256 Sha256d(byte[] buffer)
             {
-                return ExtendedBitConverter.ToInt256(sha256.ComputeHash(sha256.ComputeHash(buffer)));
+                return new UInt256(sha256.ComputeHash(sha256.ComputeHash(buffer)));
             }
         }
 
@@ -44,7 +102,7 @@ namespace FutureCash
                 return Serialize();
             }
 
-            public Int256 BlockHash
+            public UInt256 BlockHash
             {
                 get
                 {
@@ -53,7 +111,7 @@ namespace FutureCash
                 }
             }
 
-            public void Mine(Int256 maxHash, long startingNonce = 0)
+            public void Mine(UInt256 maxHash, long startingNonce = 0)
             {
                 Console.WriteLine("MaxHash: " + maxHash);
                 Nonce = startingNonce;
@@ -71,7 +129,7 @@ namespace FutureCash
         static void Main(string[] args)
         {
             var block = new Block();
-            block.Mine(Int64.MaxValue);
+            block.Mine(UInt256.MaxValue);
             Console.WriteLine(block.Nonce);
             Console.WriteLine(block.BlockHash);
             Console.ReadKey();
