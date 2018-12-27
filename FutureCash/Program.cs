@@ -111,16 +111,11 @@ namespace FutureCash
 
             public void Mine(UInt256 maxHash, long startingNonce = 0)
             {
-                Console.WriteLine("MaxHash: " + maxHash);
                 Nonce = startingNonce;
                 while (BlockHash > maxHash)
                 {
-                    Console.WriteLine("Nonce: " + Nonce);
-                    Console.WriteLine("BlockHash: " + BlockHash);
                     Nonce++;
                 }
-                Console.WriteLine("Nonce: " + Nonce);
-                Console.WriteLine("BlockHash: " + BlockHash);
             }
         }
 
