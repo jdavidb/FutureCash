@@ -129,7 +129,7 @@ namespace FutureCash
         static void Main(string[] args)
         {
             var block = new Block();
-            block.Mine(UInt256.MaxValue);
+            block.Mine(new UInt256(ulong.MaxValue / 32, ulong.MaxValue, ulong.MaxValue, ulong.MaxValue));
             Console.WriteLine(block.Nonce);
             Console.WriteLine(block.BlockHash);
             Console.ReadKey();
