@@ -14,7 +14,12 @@ namespace FutureCash
     {
         class Block
         {
+            // XXX switch this to an index of Blocks by BlockHash, plus an index of BlockHashes by BlockHeight
+            // XXX and persist it all to disk
             public static IDictionary<long, Block> BlocksByHeight = new Dictionary<long, Block>();
+
+            // target hash for minimum difficulty - maximum target allowed
+            public static UInt256 MaxTarget = UInt256.MaxValue / 65536;
 
             public long BlockHeight { get; private set; }
             public long Nonce { get; private set; }
@@ -59,7 +64,7 @@ namespace FutureCash
                 dynamic data = Header;
                 data.BlockHeight = BlockHeight;
                 data.BlockHash = BlockHash.ToHex();
-                data.ChainWork = ChainWork;
+                data.ChainWork = ChainWork.ToHex();
                 return JsonConvert.SerializeObject(data);
             }
 
@@ -85,7 +90,7 @@ namespace FutureCash
             {
                 if (parent == null)
                 {
-                    Target = UInt256.MaxValue / 65536;
+                    Target = MaxTarget;
                     ParentBlockHash = UInt256.MinValue;
                     BlockHeight = 0L;
                     ChainWork = Work;
@@ -192,7 +197,7 @@ namespace FutureCash
             var block = new Block();
             Console.WriteLine("MaxHash: " + block.Target.ToHex());
 
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine();
 
