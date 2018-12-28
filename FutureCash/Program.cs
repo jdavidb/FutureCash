@@ -19,6 +19,7 @@ namespace FutureCash
             public long Nonce;
             public UInt256 ParentBlockHash;
             public DateTime Time = DateTime.UtcNow;
+            public UInt256 Target;
 
             public Block(Block parent = null)
             {
@@ -34,6 +35,7 @@ namespace FutureCash
                     h.Nonce = Nonce;
                     h.ParentBlockHash = ParentBlockHash.ToHex();
                     h.Time = Time.ToString("o");
+                    h.Target = Target.ToHex();
                     return h;
                 }
             }
@@ -60,10 +62,10 @@ namespace FutureCash
                 }
             }
 
-            public void Mine(UInt256 maxHash, long startingNonce = 0)
+            public void Mine(long startingNonce = 0)
             {
                 Nonce = startingNonce;
-                while (BlockHash > maxHash)
+                while (BlockHash > Target)
                 {
                     Nonce++;
                 }
@@ -73,10 +75,12 @@ namespace FutureCash
             {
                 if (parent == null)
                 {
+                    Target = new UInt256(ulong.MaxValue / 65536, ulong.MaxValue, ulong.MaxValue, ulong.MaxValue);
                     ParentBlockHash = UInt256.MinValue;
                     BlockHeight = 0L;
                     return;
                 }
+                Target = parent.Target;  // XXX
                 ParentBlockHash = parent.BlockHash;
                 BlockHeight = parent.BlockHeight + 1L;
             }
@@ -159,16 +163,14 @@ namespace FutureCash
 
         static void Main(string[] args)
         {
-            var maxHash = new UInt256(ulong.MaxValue / 65536, ulong.MaxValue, ulong.MaxValue, ulong.MaxValue);
-            Console.WriteLine("MaxHash: " + maxHash.ToHex());
-
             var block = new Block();
+            Console.WriteLine("MaxHash: " + block.Target.ToHex());
 
             for (int i = 0; i < 10; i++)
             {
                 Console.WriteLine();
 
-                block.Mine(maxHash);
+                block.Mine();
                 Console.WriteLine("Height: " + i);
                 Console.WriteLine("Nonce: " + block.Nonce);
                 Console.WriteLine("Hash: " + block.BlockHash.ToHex());
