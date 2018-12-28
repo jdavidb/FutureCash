@@ -13,6 +13,8 @@ namespace FutureCash
     {
         class Block
         {
+            public static IDictionary<long, Block> BlocksByHeight = new Dictionary<long, Block>();
+
             public long BlockHeight;
             public long Nonce;
             public UInt256 ParentBlockHash;
@@ -21,6 +23,7 @@ namespace FutureCash
             public Block(Block parent = null)
             {
                 SetParent(parent);
+                BlocksByHeight[BlockHeight] = this;
             }
 
             private dynamic Header
