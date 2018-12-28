@@ -44,6 +44,7 @@ namespace FutureCash
             {
                 dynamic data = Header;
                 data.BlockHeight = BlockHeight;
+                data.BlockHash = BlockHash.ToHex();
                 return JsonConvert.SerializeObject(data);
             }
 
