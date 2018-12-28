@@ -12,9 +12,15 @@ namespace FutureCash
     {
         class Block
         {
+            public long BlockHeight;
             public long Nonce;
             public UInt256 ParentBlockHash;
             public DateTime Time = DateTime.UtcNow;
+
+            public Block(Block parent = null)
+            {
+                SetParent(parent);
+            }
 
             private Object SerializableRepresentation
             {
@@ -55,6 +61,18 @@ namespace FutureCash
                 {
                     Nonce++;
                 }
+            }
+
+            public void SetParent(Block parent)
+            {
+                if (parent == null)
+                {
+                    ParentBlockHash = UInt256.MinValue;
+                    BlockHeight = 0L;
+                    return;
+                }
+                ParentBlockHash = parent.BlockHash;
+                BlockHeight = parent.BlockHeight + 1L;
             }
         }
 
@@ -139,7 +157,6 @@ namespace FutureCash
             Console.WriteLine("MaxHash: " + maxHash.ToHex());
 
             var block = new Block();
-            block.ParentBlockHash = UInt256.MinValue;
 
             for (int i = 0; i < 10; i++)
             {
@@ -152,8 +169,7 @@ namespace FutureCash
                 Console.WriteLine("Block: " + block.ToString());
 
                 var oldBlock = block;
-                block = new Block();
-                block.ParentBlockHash = oldBlock.BlockHash;
+                block = new Block(oldBlock);
             }
             Console.ReadKey();
         }
