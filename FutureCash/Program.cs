@@ -21,6 +21,9 @@ namespace FutureCash
             // target hash for minimum difficulty - maximum target allowed
             public static UInt256 MaxTarget = UInt256.MaxValue / 65536;
 
+            // desired block interval in seconds
+            public static int BlockInterval = 60;
+
             public long BlockHeight { get; private set; }
             public long Nonce { get; private set; }
             public UInt256 ParentBlockHash { get; private set; }
@@ -82,8 +85,40 @@ namespace FutureCash
                 Nonce = startingNonce;
                 while (BlockHash > Target)
                 {
+                    //if ((Nonce % 100000) == 0)
+                    //{
+                    //    Console.WriteLine("Invalid nonce: " + Nonce + " / Hash: " + BlockHash.ToHex());
+                    //}
                     Nonce++;
                 }
+            }
+
+            private static UInt256 ComputeNewTarget(Block b1, Block b2)
+            {
+                var work = b2.ChainWork - b1.ChainWork;
+                var heightDifference = b2.BlockHeight - b1.BlockHeight;
+                var expectedTime = heightDifference * BlockInterval;
+                var actualTime = b2.Time - b1.Time;
+                var actualTimeSeconds = Convert.ToInt64(actualTime.TotalSeconds);
+                if (actualTimeSeconds > 2 * expectedTime) actualTimeSeconds = 2 * expectedTime;
+                if (actualTimeSeconds < expectedTime / 2) actualTimeSeconds = expectedTime / 2;
+
+                var workNew = work * expectedTime / actualTimeSeconds;
+                var newTarget = UInt256.MaxValue / workNew;
+                //Console.WriteLine("New target: " + newTarget.ToHex());
+                return newTarget;
+            }
+
+            private UInt256 ComputeNewTarget()
+            {
+                // XXX
+                // look up by hash instead
+                // among many other changes here
+                var parent = BlocksByHeight[BlockHeight - 1];
+                if (BlockHeight <= 6)
+                    return parent.Target;
+                var genesisBlock = BlocksByHeight[0];
+                return ComputeNewTarget(genesisBlock, parent);
             }
 
             public void SetParent(Block parent)
@@ -96,9 +131,9 @@ namespace FutureCash
                     ChainWork = Work;
                     return;
                 }
-                Target = parent.Target;  // XXX
                 ParentBlockHash = parent.BlockHash;
                 BlockHeight = parent.BlockHeight + 1L;
+                Target = ComputeNewTarget();
                 ChainWork = parent.ChainWork + Work;
             }
         }
@@ -170,15 +205,40 @@ namespace FutureCash
                 return new UInt256(a.value / b);
             }
 
+            public static UInt256 operator /(UInt256 a, long b)
+            {
+                // XXX range checking?
+                return new UInt256(a.value / b);
+            }
+
+            private static UInt256 RestrainRange(BigInteger value)
+            {
+                if (value > UInt256.MaxValue.value)
+                    return UInt256.MaxValue;
+                if (value < UInt256.MinValue.value)
+                    return UInt256.MinValue;
+                return new UInt256(value);
+            }
+
             public static UInt256 operator +(UInt256 a, UInt256 b)
             {
                 var result = a.value + b.value;
                 // XXX range checking - should I throw an exception instead?
-                if (result > UInt256.MaxValue.value)
-                    return UInt256.MaxValue;
-                if (result < UInt256.MinValue.value)
-                    return UInt256.MinValue;
-                return new UInt256(result);
+                return RestrainRange(result);
+            }
+
+            public static UInt256 operator -(UInt256 a, UInt256 b)
+            {
+                var result = a.value - b.value;
+                // XXX range checking - should I throw an exception instead?
+                return RestrainRange(result);
+            }
+
+            public static UInt256 operator *(UInt256 a, long b)
+            {
+                var result = a.value * b;
+                // XXX range checking - should I throw an exception instead?
+                return RestrainRange(result);
             }
         }
 
