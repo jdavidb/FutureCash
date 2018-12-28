@@ -10,6 +10,54 @@ namespace FutureCash
 {
     class Program
     {
+        class Block
+        {
+            public long Nonce;
+            public UInt256 ParentBlockHash;
+            public DateTime Time = DateTime.UtcNow;
+
+            private Object SerializableRepresentation
+            {
+                get
+                {
+                    return new
+                    {
+                        Nonce = Nonce,
+                        ParentBlockHash = ParentBlockHash.ToHex(),
+                        Time = Time.ToString("o")
+                    };
+                }
+            }
+
+            public string Serialize()
+            {
+                return JsonConvert.SerializeObject(SerializableRepresentation);
+            }
+
+            public override string ToString()
+            {
+                return Serialize();
+            }
+
+            public UInt256 BlockHash
+            {
+                get
+                {
+                    var buffer = Encoding.UTF8.GetBytes(Serialize());
+                    return Hash.Sha256d(buffer);
+                }
+            }
+
+            public void Mine(UInt256 maxHash, long startingNonce = 0)
+            {
+                Nonce = startingNonce;
+                while (BlockHash > maxHash)
+                {
+                    Nonce++;
+                }
+            }
+        }
+
         class UInt256 : IComparable<UInt256>
         {
             private ulong A;
@@ -82,54 +130,6 @@ namespace FutureCash
             public static UInt256 Sha256d(byte[] buffer)
             {
                 return new UInt256(sha256.ComputeHash(sha256.ComputeHash(buffer)));
-            }
-        }
-
-        class Block
-        {
-            public long Nonce;
-            public UInt256 ParentBlockHash;
-            public DateTime Time = DateTime.UtcNow;
-
-            private Object SerializableRepresentation
-            {
-                get
-                {
-                    return new
-                    {
-                        Nonce = Nonce,
-                        ParentBlockHash = ParentBlockHash.ToHex(),
-                        Time = Time.ToString("o")
-                    };
-                }
-            }
-
-            public string Serialize()
-            {
-                return JsonConvert.SerializeObject(SerializableRepresentation);
-            }
-
-            public override string ToString()
-            {
-                return Serialize();
-            }
-
-            public UInt256 BlockHash
-            {
-                get
-                {
-                    var buffer = Encoding.UTF8.GetBytes(Serialize());
-                    return Hash.Sha256d(buffer);
-                }
-            }
-
-            public void Mine(UInt256 maxHash, long startingNonce = 0)
-            {
-                Nonce = startingNonce;
-                while (BlockHash > maxHash)
-                {
-                    Nonce++;
-                }
             }
         }
 
