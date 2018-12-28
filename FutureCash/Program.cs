@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
+using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -84,7 +85,7 @@ namespace FutureCash
             {
                 if (parent == null)
                 {
-                    Target = new UInt256(ulong.MaxValue / 65536, ulong.MaxValue, ulong.MaxValue, ulong.MaxValue);
+                    Target = UInt256.MaxValue / 65536;
                     ParentBlockHash = UInt256.MinValue;
                     BlockHeight = 0L;
                     ChainWork = Work;
@@ -99,66 +100,80 @@ namespace FutureCash
 
         class UInt256 : IComparable<UInt256>
         {
-            private ulong A;
-            private ulong B;
-            private ulong C;
-            private ulong D;
+            private BigInteger value;
 
-            public UInt256(ulong a, ulong b, ulong c, ulong d)
-            {
-                A = a;
-                B = b;
-                C = c;
-                D = d;
-            }
-
-            public static UInt256 MaxValue = new UInt256(ulong.MaxValue, ulong.MaxValue, ulong.MaxValue, ulong.MaxValue);
-            public static UInt256 MinValue = new UInt256(0, 0, 0, 0);
+            public static UInt256 MaxValue = new UInt256(Enumerable.Repeat(byte.MaxValue, 32).ToArray());
+            public static UInt256 MinValue = new UInt256(new byte[] { (byte)0 });
 
             public UInt256(byte[] value, int startIndex = 0)
             {
-                A = BitConverter.ToUInt64(value, startIndex);
-                B = BitConverter.ToUInt64(value, startIndex + 4);
-                C = BitConverter.ToUInt64(value, startIndex + 8);
-                D = BitConverter.ToUInt64(value, startIndex + 12);
+                if (value.Length > 32)
+                    throw new ArgumentOutOfRangeException("value", value, "byte array is too long for unsigned 256 bit integer");
+                var byteList = new List<byte>();
+                byteList.Add((byte)0);  // this ensures we get an unsigned integer instead of interpreting a leading 1 as a sign bit
+                byteList.AddRange(value);
+                byteList.Reverse();
+                var littleEndianValue = byteList.ToArray();
+                this.value = new BigInteger(littleEndianValue);
+                var roundTrip = this.value.ToByteArray();
+                // XXX how do I verify that this is not creating a negative value?
+                // XXX I have to include a 0 byte to make sure I don't get a negative value
+                // XXX byteorder - sounds like this is the opposite of what I was getting from the hashes
+                // XXX after I create the value I should be able to round trip it and get my original input
+            }
+
+            private UInt256(BigInteger value)
+            {
+                this.value = value;
             }
 
             public override string ToString()
             {
-                return A.ToString() + B.ToString() + C.ToString() + D.ToString();
+                return value.ToString();
             }
 
             public int CompareTo(UInt256 other)
             {
-                if (A < other.A)
-                    return -1;
-                if (A > other.A)
-                    return 1;
-                if (B < other.B)
-                    return -1;
-                if (B > other.B)
-                    return 1;
-                if (C < other.C)
-                    return -1;
-                if (C > other.C)
-                    return 1;
-                return D.CompareTo(other.D);
+                return value.CompareTo(other.value);
             }
 
             public static bool operator <(UInt256 a, UInt256 b)
             {
-                return a.CompareTo(b) < 0;
+                return a.value < b.value;
             }
 
             public static bool operator >(UInt256 a, UInt256 b)
             {
-                return a.CompareTo(b) > 0;
+                return a.value > b.value;
             }
 
             public string ToHex()
             {
-                var format = "x16";
-                return A.ToString(format) + B.ToString(format) + C.ToString(format) + D.ToString(format);
+                var format = "x64";
+                return value.ToString(format);
+            }
+
+            public static UInt256 operator /(UInt256 a, UInt256 b)
+            {
+                // XXX range checking?
+                return new UInt256(a.value / b.value);
+            }
+
+            public static UInt256 operator /(UInt256 a, int b)
+            {
+                // XXX range checking?
+                return new UInt256(a.value / b);
+            }
+
+            public static UInt256 operator +(UInt256 a, UInt256 b)
+            {
+                var result = a.value + b.value;
+                // XXX range checking - should I throw an exception instead?
+                if (result > UInt256.MaxValue.value)
+                    return UInt256.MaxValue;
+                if (result < UInt256.MinValue.value)
+                    return UInt256.MinValue;
+                return new UInt256(result);
             }
         }
 
