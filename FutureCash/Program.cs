@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -22,27 +23,28 @@ namespace FutureCash
                 SetParent(parent);
             }
 
-            private Object SerializableRepresentation
+            private dynamic Header
             {
                 get
                 {
-                    return new
-                    {
-                        Nonce = Nonce,
-                        ParentBlockHash = ParentBlockHash.ToHex(),
-                        Time = Time.ToString("o")
-                    };
+                    dynamic h = new ExpandoObject();
+                    h.Nonce = Nonce;
+                    h.ParentBlockHash = ParentBlockHash.ToHex();
+                    h.Time = Time.ToString("o");
+                    return h;
                 }
             }
 
             public string Serialize()
             {
-                return JsonConvert.SerializeObject(SerializableRepresentation);
+                return JsonConvert.SerializeObject(Header);
             }
 
             public override string ToString()
             {
-                return Serialize();
+                dynamic data = Header;
+                data.BlockHeight = BlockHeight;
+                return JsonConvert.SerializeObject(data);
             }
 
             public UInt256 BlockHash
