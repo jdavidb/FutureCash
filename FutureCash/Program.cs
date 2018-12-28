@@ -15,11 +15,19 @@ namespace FutureCash
         {
             public static IDictionary<long, Block> BlocksByHeight = new Dictionary<long, Block>();
 
-            public long BlockHeight;
-            public long Nonce;
-            public UInt256 ParentBlockHash;
-            public DateTime Time = DateTime.UtcNow;
-            public UInt256 Target;
+            public long BlockHeight { get; private set; }
+            public long Nonce { get; private set; }
+            public UInt256 ParentBlockHash { get; private set; }
+            public DateTime Time { get; } = DateTime.UtcNow;
+            public UInt256 Target { get; private set; }
+            public UInt256 Work
+            {
+                get
+                {
+                    return UInt256.MaxValue / Target;
+                }
+            }
+            public UInt256 ChainWork { get; private set; }
 
             public Block(Block parent = null)
             {
@@ -50,6 +58,7 @@ namespace FutureCash
                 dynamic data = Header;
                 data.BlockHeight = BlockHeight;
                 data.BlockHash = BlockHash.ToHex();
+                data.ChainWork = ChainWork;
                 return JsonConvert.SerializeObject(data);
             }
 
@@ -78,11 +87,13 @@ namespace FutureCash
                     Target = new UInt256(ulong.MaxValue / 65536, ulong.MaxValue, ulong.MaxValue, ulong.MaxValue);
                     ParentBlockHash = UInt256.MinValue;
                     BlockHeight = 0L;
+                    ChainWork = Work;
                     return;
                 }
                 Target = parent.Target;  // XXX
                 ParentBlockHash = parent.BlockHash;
                 BlockHeight = parent.BlockHeight + 1L;
+                ChainWork = parent.ChainWork + Work;
             }
         }
 
