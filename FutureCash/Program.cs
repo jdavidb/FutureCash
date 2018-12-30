@@ -103,7 +103,7 @@ namespace FutureCash
                 if (actualTimeSeconds > 2 * expectedTime) actualTimeSeconds = 2 * expectedTime;
                 if (actualTimeSeconds < expectedTime / 2) actualTimeSeconds = expectedTime / 2;
 
-                var workNew = work * expectedTime / actualTimeSeconds;
+                var workNew = work * BlockInterval / actualTimeSeconds;
                 var newTarget = UInt256.MaxValue / workNew;
                 //Console.WriteLine("New target: " + newTarget.ToHex());
                 return newTarget;
