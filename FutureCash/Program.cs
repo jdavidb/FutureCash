@@ -7,11 +7,14 @@ using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using System.Timers;
 
 namespace FutureCash
 {
     class Program
     {
+        static Block newBlock;
+
         class Block
         {
             // XXX switch this to an index of Blocks by BlockHash, plus an index of BlockHashes by BlockHeight
@@ -22,12 +25,12 @@ namespace FutureCash
             public static UInt256 MaxTarget = UInt256.MaxValue / 65536;
 
             // desired block interval in seconds
-            public static int BlockInterval = 60;
+            public static int BlockInterval = 1;
 
             public long BlockHeight { get; private set; }
             public long Nonce { get; private set; }
             public UInt256 ParentBlockHash { get; private set; }
-            public DateTime Time { get; } = DateTime.UtcNow;
+            public DateTime Time { get; set; } = DateTime.UtcNow;
             public UInt256 Target { get; private set; }
             public UInt256 Work
             {
@@ -95,7 +98,6 @@ namespace FutureCash
 
             private static UInt256 ComputeNewTarget(Block b1, Block b2)
             {
-                var work = b2.ChainWork - b1.ChainWork;
                 var heightDifference = b2.BlockHeight - b1.BlockHeight;
                 var expectedTime = heightDifference * BlockInterval;
                 var actualTime = b2.Time - b1.Time;
@@ -103,9 +105,28 @@ namespace FutureCash
                 if (actualTimeSeconds > 2 * expectedTime) actualTimeSeconds = 2 * expectedTime;
                 if (actualTimeSeconds < expectedTime / 2) actualTimeSeconds = expectedTime / 2;
 
-                var workNew = work * BlockInterval / actualTimeSeconds;
-                var newTarget = UInt256.MaxValue / workNew;
-                //Console.WriteLine("New target: " + newTarget.ToHex());
+                Console.WriteLine("Expected time: " + expectedTime);
+                Console.WriteLine("Actual time: " + actualTimeSeconds);
+                Console.WriteLine("Expected/actual ratio: " + (decimal)expectedTime / (decimal)actualTimeSeconds);
+                if (actualTimeSeconds > expectedTime)
+                {
+                    Console.WriteLine("Actual time > expected time: target should go up to make it easier");
+                }
+                else if (actualTimeSeconds < expectedTime)
+                {
+                    Console.WriteLine("Actual time < expected time: target should go down to make it harder");
+                }
+                var newTarget = b2.Target * actualTimeSeconds / expectedTime;
+                if (newTarget > b2.Target)
+                {
+                    Console.WriteLine("Target went up: easier");
+                }
+                else if (newTarget < b2.Target)
+                {
+                    Console.WriteLine("Target went down: harder");
+                }
+                Console.WriteLine("Oldtarget/newtarget ratio as %: " + b2.Target.DivPercent(newTarget));
+                Console.WriteLine("New target: " + newTarget.ToHex());
                 return newTarget;
             }
 
@@ -220,6 +241,13 @@ namespace FutureCash
                 return new UInt256(value);
             }
 
+            internal decimal DivPercent(UInt256 other)
+            {
+                var v = value;
+                var vo = other.value;
+                return (decimal)(v * 100 / vo);
+            }
+
             public static UInt256 operator +(UInt256 a, UInt256 b)
             {
                 var result = a.value + b.value;
@@ -254,21 +282,27 @@ namespace FutureCash
 
         static void Main(string[] args)
         {
-            var block = new Block();
-            Console.WriteLine("MaxHash: " + block.Target.ToHex());
+            newBlock = new Block();
+            Console.WriteLine("MaxHash: " + newBlock.Target.ToHex());
 
-            for (int i = 0; i < 100; i++)
+            var timer = new Timer(3000);
+            timer.Elapsed += (Object source, ElapsedEventArgs e) => { newBlock.Time = DateTime.UtcNow; };
+            timer.AutoReset = true;
+            timer.Enabled = true;
+
+            for (int i = 0; i < 100000; i++)
             {
                 Console.WriteLine();
 
-                block.Mine();
+                newBlock.Mine();
                 Console.WriteLine("Height: " + i);
-                Console.WriteLine("Nonce: " + block.Nonce);
-                Console.WriteLine("Hash: " + block.BlockHash.ToHex());
-                Console.WriteLine("Block: " + block.ToString());
+                //Console.WriteLine("Nonce: " + newBlock.Nonce);
+                Console.WriteLine("Hash: " + newBlock.BlockHash.ToHex());
+                //Console.WriteLine("Block: " + newBlock.ToString());
+                Console.WriteLine("Time: " + DateTime.UtcNow.ToString("o"));
 
-                var oldBlock = block;
-                block = new Block(oldBlock);
+                var oldBlock = newBlock;
+                newBlock = new Block(oldBlock);
             }
             Console.ReadKey();
         }
