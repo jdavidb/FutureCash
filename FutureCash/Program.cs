@@ -25,7 +25,10 @@ namespace FutureCash
             public static UInt256 MaxTarget = UInt256.MaxValue / 65536;
 
             // desired block interval in seconds
-            public static int BlockInterval = 1;
+            public static int BlockInterval = 60;  // target block interval in seconds
+            public static int DifficultyAdjustmentComputationInterval = 86400;  // one day in seconds
+            private static int BlocksPerAdjustmentComputationInterval = DifficultyAdjustmentComputationInterval / BlockInterval;
+            public static int TestScalingFactor = 60;
 
             public long BlockHeight { get; private set; }
             public long Nonce { get; private set; }
@@ -98,15 +101,18 @@ namespace FutureCash
 
             private static UInt256 ComputeNewTarget(Block b1, Block b2)
             {
+                var effectiveBlockInterval = BlockInterval / TestScalingFactor;
+
                 var work = b2.ChainWork - b1.ChainWork;
                 var heightDifference = b2.BlockHeight - b1.BlockHeight;
-                var expectedTime = heightDifference * BlockInterval;
+                var expectedTime = heightDifference * effectiveBlockInterval;
                 var actualTime = b2.Time - b1.Time;
                 var actualTimeSeconds = Convert.ToInt64(actualTime.TotalSeconds);
                 if (actualTimeSeconds > 2 * expectedTime) actualTimeSeconds = 2 * expectedTime;
                 if (actualTimeSeconds < expectedTime / 2) actualTimeSeconds = expectedTime / 2;
+                if (actualTimeSeconds == 0) actualTimeSeconds = 1;
 
-                var workNew = work * BlockInterval / actualTimeSeconds;
+                var workNew = work * effectiveBlockInterval / actualTimeSeconds;
                 var newTarget = UInt256.MaxValue / workNew;
                 Console.WriteLine("Expected time: " + expectedTime);
                 Console.WriteLine("Actual time: " + actualTimeSeconds);
@@ -135,14 +141,21 @@ namespace FutureCash
 
             private UInt256 ComputeNewTarget()
             {
+                if (BlockHeight < 1)
+                    return MaxTarget;
+
                 // XXX
                 // look up by hash instead
                 // among many other changes here
                 var parent = BlocksByHeight[BlockHeight - 1];
                 if (BlockHeight <= 6)
                     return parent.Target;
-                var genesisBlock = BlocksByHeight[0];
-                return ComputeNewTarget(genesisBlock, parent);
+
+                var ancestorIndex = parent.BlockHeight - BlocksPerAdjustmentComputationInterval;
+                if (ancestorIndex < 0) ancestorIndex = 0;
+
+                var firstBlock = BlocksByHeight[ancestorIndex];
+                return ComputeNewTarget(firstBlock, parent);
             }
 
             public void SetParent(Block parent)
