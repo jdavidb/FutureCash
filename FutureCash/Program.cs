@@ -28,7 +28,7 @@ namespace FutureCash
             public static int BlockInterval = 60;  // target block interval in seconds
             public static int DifficultyAdjustmentComputationInterval = 86400;  // one day in seconds
             private static int BlocksPerAdjustmentComputationInterval = DifficultyAdjustmentComputationInterval / BlockInterval;
-            public static int TestScalingFactor = 60;
+            public static int TestScalingFactor = 1;
 
             public long BlockHeight { get; private set; }
             public long Nonce { get; private set; }
@@ -115,13 +115,14 @@ namespace FutureCash
                 IList<Block> blocks = new List<Block>();
                 if (n > BlockHeight) n = BlockHeight;
                 var b = this;
-                for (var i = n; i >= 0; i--)
+                for (var i = n; i > 0; i--)
                 {
                     blocks.Add(b);
                     b = b.ParentBlock;
                 }
                 var orderedBlocks = blocks.OrderBy(p => p.Time);
-                return orderedBlocks.ElementAt(Convert.ToInt32(n) / 2);
+                var medianBlock = orderedBlocks.ElementAt(Convert.ToInt32(n) / 2);
+                return medianBlock;
             }
 
             private static UInt256 ComputeNewTarget(Block b1, Block b2)
