@@ -99,6 +99,31 @@ namespace FutureCash
                 }
             }
 
+            private Block ParentBlock
+            {
+                get
+                {
+                    if (BlockHeight < 1)
+                        return null;
+                    return BlocksByHeight[BlockHeight - 1];
+                }
+            }
+
+            // Get the block with median time from the last N blocks
+            private Block GetMedianBlock(long n = 3)
+            {
+                IList<Block> blocks = new List<Block>();
+                if (n > BlockHeight) n = BlockHeight;
+                var b = this;
+                for (var i = n; i >= 0; i--)
+                {
+                    blocks.Add(b);
+                    b = b.ParentBlock;
+                }
+                var orderedBlocks = blocks.OrderBy(p => p.Time);
+                return orderedBlocks.ElementAt(Convert.ToInt32(n) / 2);
+            }
+
             private static UInt256 ComputeNewTarget(Block b1, Block b2)
             {
                 var effectiveBlockInterval = BlockInterval / TestScalingFactor;
@@ -153,8 +178,12 @@ namespace FutureCash
 
                 var ancestorIndex = parent.BlockHeight - BlocksPerAdjustmentComputationInterval;
                 if (ancestorIndex < 0) ancestorIndex = 0;
-
                 var firstBlock = BlocksByHeight[ancestorIndex];
+
+                parent = parent.GetMedianBlock();
+                if (firstBlock.BlockHeight >= 2)
+                    firstBlock = firstBlock.GetMedianBlock();
+
                 return ComputeNewTarget(firstBlock, parent);
             }
 
