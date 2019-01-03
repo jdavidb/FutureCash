@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
+using System.Net;
 using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
@@ -351,7 +352,7 @@ namespace FutureCash
             }
         }
 
-        static void Main(string[] args)
+        private static void Mine()
         {
             var newBlock = new Block();
             Console.WriteLine("MaxHash: " + Block.MaxTarget.ToHex());
@@ -367,7 +368,7 @@ namespace FutureCash
 
                 newBlock.Mine();
                 Console.WriteLine("Height: " + i);
-                //Console.WriteLine("Nonce: " + newBlock.Nonce);
+                Console.WriteLine("Nonce: " + newBlock.Nonce);
                 Console.WriteLine("Hash: " + newBlock.BlockHash.ToHex());
                 //Console.WriteLine("Block: " + newBlock.ToString());
                 Console.WriteLine("Time: " + DateTime.UtcNow.ToString("o"));
@@ -375,7 +376,40 @@ namespace FutureCash
                 var oldBlock = newBlock;
                 newBlock = new Block(oldBlock);
             }
+        }
+
+        static void Main(string[] args)
+        {
+            if (args.Length > 0)
+            {
+                var endpoint = ParseIPEndPoint(args[0]);
+                Console.WriteLine("Parsed");
+                Console.WriteLine("Host: " + endpoint.Address);
+                Console.WriteLine("Port: " + endpoint.Port);
+            }
+            Mine();
             Console.ReadKey();
+        }
+
+        private static IPEndPoint ParseIPEndPoint(string endpoint, int defaultPort = 0)
+        {
+            Uri uri;
+            var success = Uri.TryCreate(endpoint, UriKind.Absolute, out uri);
+            if (success)
+                if (uri.Host.Length < 1)
+                    success = false;
+            if (!success)
+                success = Uri.TryCreate(String.Concat("tcp://", endpoint), UriKind.Absolute, out uri);
+            if (!success)
+                success = Uri.TryCreate(String.Concat("tcp://", String.Concat("[", endpoint, "]")), UriKind.Absolute, out uri);
+            var host = uri.Host;
+            var address = Dns.GetHostAddresses(host)[0];
+            var port = uri.Port;
+            if (port <= IPEndPoint.MinPort)
+                port = defaultPort;
+            if (success)
+                return new IPEndPoint(address, port);
+            throw new FormatException("Unable to obtain host and port from [" + endpoint + "]");
         }
     }
 }
