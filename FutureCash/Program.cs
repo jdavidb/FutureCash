@@ -13,8 +13,6 @@ namespace FutureCash
 {
     class Program
     {
-        static Block newBlock;
-
         class Block
         {
             // XXX switch this to an index of Blocks by BlockHash, plus an index of BlockHashes by BlockHeight
@@ -43,6 +41,29 @@ namespace FutureCash
                 }
             }
             public UInt256 ChainWork { get; private set; }
+
+            private static bool NewBlockTimeDirty = true;
+            private static object NewBlockTimeLock = new object();
+            private static DateTime _NewBlockTime = DateTime.UtcNow;
+            public static DateTime NewBlockTime
+            {
+                get
+                {
+                    lock (NewBlockTimeLock)
+                    {
+                        NewBlockTimeDirty = false;
+                        return _NewBlockTime;
+                    }
+                }
+                set
+                {
+                    lock (NewBlockTimeLock)
+                    {
+                        NewBlockTimeDirty = true;
+                        _NewBlockTime = value;
+                    }
+                }
+            }
 
             public Block(Block parent = null)
             {
@@ -96,6 +117,10 @@ namespace FutureCash
                     //    Console.WriteLine("Invalid nonce: " + Nonce + " / Hash: " + BlockHash.ToHex());
                     //}
                     Nonce++;
+                    if (NewBlockTimeDirty)
+                    {
+                        Time = NewBlockTime;
+                    }
                 }
             }
 
@@ -328,11 +353,11 @@ namespace FutureCash
 
         static void Main(string[] args)
         {
-            newBlock = new Block();
-            Console.WriteLine("MaxHash: " + newBlock.Target.ToHex());
+            var newBlock = new Block();
+            Console.WriteLine("MaxHash: " + Block.MaxTarget.ToHex());
 
             var timer = new Timer(3000);
-            timer.Elapsed += (Object source, ElapsedEventArgs e) => { newBlock.Time = DateTime.UtcNow; };
+            timer.Elapsed += (Object source, ElapsedEventArgs e) => { Block.NewBlockTime = DateTime.UtcNow; };
             timer.AutoReset = true;
             timer.Enabled = true;
 
