@@ -2,8 +2,10 @@
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
+using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Sockets;
 using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
@@ -383,12 +385,23 @@ namespace FutureCash
             if (args.Length > 0)
             {
                 var endpoint = ParseIPEndPoint(args[0]);
-                Console.WriteLine("Parsed");
                 Console.WriteLine("Host: " + endpoint.Address);
                 Console.WriteLine("Port: " + endpoint.Port);
+                ConnectAndSync(endpoint);
             }
             Mine();
             Console.ReadKey();
+        }
+
+        private static void ConnectAndSync(IPEndPoint server)
+        {
+            using (var tcpClient = new TcpClient(server.Address.ToString(), server.Port))
+            using (var ns = tcpClient.GetStream())
+            using (var sr = new StreamReader(ns))
+            {
+                var line = sr.ReadLine();
+                Console.WriteLine(line);
+            }
         }
 
         private static IPEndPoint ParseIPEndPoint(string endpoint, int defaultPort = 0)
