@@ -22,6 +22,7 @@ namespace FutureCash
             // XXX switch this to an index of Blocks by BlockHash, plus an index of BlockHashes by BlockHeight
             // XXX and persist it all to disk
             public static IDictionary<long, Block> BlocksByHeight = new Dictionary<long, Block>();
+            public static long BlockCount = -1;
 
             // target hash for minimum difficulty - maximum target allowed
             public static UInt256 MaxTarget = UInt256.MaxValue / 65536;
@@ -126,6 +127,7 @@ namespace FutureCash
                         Time = NewBlockTime;
                     }
                 }
+                BlockCount = BlockHeight;
             }
 
             private Block ParentBlock
@@ -419,9 +421,20 @@ namespace FutureCash
                         () =>
                         {
                             using (var ns = client.GetStream())
+                            using (var sr = new StreamReader(ns))
                             using (var sw = new StreamWriter(ns))
                             {
-                                sw.WriteLine("Connected to the server!");
+                                dynamic cmd = JsonConvert.DeserializeObject(sr.ReadLine());
+                                object result;
+                                if (cmd["command"] == "getblockcount")
+                                {
+                                    result = Block.BlockCount;
+                                }
+                                else
+                                {
+                                    result = new { errorMessage = "Unrecognized command " + cmd["command"] };
+                                }
+                                sw.WriteLine(JsonConvert.SerializeObject(result));
                             }
                         }).Start();
                 }
@@ -433,7 +446,11 @@ namespace FutureCash
             using (var tcpClient = new TcpClient(server.Address.ToString(), server.Port))
             using (var ns = tcpClient.GetStream())
             using (var sr = new StreamReader(ns))
+            using (var sw = new StreamWriter(ns))
             {
+                var cmd = new { command = "getblockcount" };
+                sw.WriteLine(JsonConvert.SerializeObject(cmd));
+                sw.Flush();
                 var line = sr.ReadLine();
                 Console.WriteLine(line);
             }
