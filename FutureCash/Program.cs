@@ -9,6 +9,7 @@ using System.Net.Sockets;
 using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
 
@@ -359,7 +360,7 @@ namespace FutureCash
             var newBlock = new Block();
             Console.WriteLine("MaxHash: " + Block.MaxTarget.ToHex());
 
-            var timer = new Timer(3000);
+            var timer = new System.Timers.Timer(3000);
             timer.Elapsed += (Object source, ElapsedEventArgs e) => { Block.NewBlockTime = DateTime.UtcNow; };
             timer.AutoReset = true;
             timer.Enabled = true;
@@ -380,8 +381,17 @@ namespace FutureCash
             }
         }
 
+        private static bool serverRunning = true;
+
         static void Main(string[] args)
         {
+            try
+            {
+                StartServerThread();
+            }
+            catch (Exception ex)
+            {
+            }
             if (args.Length > 0)
             {
                 var endpoint = ParseIPEndPoint(args[0]);
@@ -391,6 +401,31 @@ namespace FutureCash
             }
             Mine();
             Console.ReadKey();
+            serverRunning = false;
+        }
+
+        private static void StartServerThread(int port = 9999)
+        {
+            var listener = new TcpListener(IPAddress.IPv6Any, port);
+            listener.Server.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.IPv6Only, false);
+            listener.Start();
+            new Thread(
+            () =>
+            {
+                while (serverRunning)
+                {
+                    var client = listener.AcceptTcpClient();
+                    new Thread(
+                        () =>
+                        {
+                            using (var ns = client.GetStream())
+                            using (var sw = new StreamWriter(ns))
+                            {
+                                sw.WriteLine("Connected to the server!");
+                            }
+                        }).Start();
+                }
+            }).Start();
         }
 
         private static void ConnectAndSync(IPEndPoint server)
