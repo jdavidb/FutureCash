@@ -21,7 +21,8 @@ namespace FutureCash
         {
             // XXX switch this to an index of Blocks by BlockHash, plus an index of BlockHashes by BlockHeight
             // XXX and persist it all to disk
-            public static IDictionary<long, Block> BlocksByHeight = new Dictionary<long, Block>();
+            public static IDictionary<long, string> BlocksByHeight = new Dictionary<long, string>();
+            public static IDictionary<string, Block> Blocks = new Dictionary<string, Block>();
             public static long BlockCount = -1;
 
             // target hash for minimum difficulty - maximum target allowed
@@ -73,7 +74,6 @@ namespace FutureCash
             public Block(Block parent = null)
             {
                 SetParent(parent);
-                BlocksByHeight[BlockHeight] = this;
             }
 
             private dynamic Header
@@ -128,6 +128,8 @@ namespace FutureCash
                     }
                 }
                 BlockCount = BlockHeight;
+                BlocksByHeight[BlockHeight] = BlockHash.ToString();
+                Blocks[BlockHash.ToString()] = this;
             }
 
             private Block ParentBlock
@@ -136,7 +138,7 @@ namespace FutureCash
                 {
                     if (BlockHeight < 1)
                         return null;
-                    return BlocksByHeight[BlockHeight - 1];
+                    return Blocks[ParentBlockHash.ToString()];
                 }
             }
 
@@ -201,16 +203,13 @@ namespace FutureCash
                 if (BlockHeight < 1)
                     return MaxTarget;
 
-                // XXX
-                // look up by hash instead
-                // among many other changes here
-                var parent = BlocksByHeight[BlockHeight - 1];
+                var parent = ParentBlock;
                 if (BlockHeight <= 6)
                     return parent.Target;
 
                 var ancestorIndex = parent.BlockHeight - BlocksPerAdjustmentComputationInterval;
                 if (ancestorIndex < 0) ancestorIndex = 0;
-                var firstBlock = BlocksByHeight[ancestorIndex];
+                var firstBlock = Blocks[BlocksByHeight[ancestorIndex]];
 
                 parent = parent.GetMedianBlock();
                 if (firstBlock.BlockHeight >= 2)
@@ -253,11 +252,6 @@ namespace FutureCash
                 byteList.Reverse();
                 var littleEndianValue = byteList.ToArray();
                 this.value = new BigInteger(littleEndianValue);
-                var roundTrip = this.value.ToByteArray();
-                // XXX how do I verify that this is not creating a negative value?
-                // XXX I have to include a 0 byte to make sure I don't get a negative value
-                // XXX byteorder - sounds like this is the opposite of what I was getting from the hashes
-                // XXX after I create the value I should be able to round trip it and get my original input
             }
 
             private UInt256(BigInteger value)
@@ -267,7 +261,7 @@ namespace FutureCash
 
             public override string ToString()
             {
-                return value.ToString();
+                return ToHex();
             }
 
             public int CompareTo(UInt256 other)
@@ -375,7 +369,7 @@ namespace FutureCash
                 Console.WriteLine("Height: " + i);
                 Console.WriteLine("Nonce: " + newBlock.Nonce);
                 Console.WriteLine("Hash: " + newBlock.BlockHash.ToHex());
-                //Console.WriteLine("Block: " + newBlock.ToString());
+                Console.WriteLine("Block: " + newBlock.ToString());
                 Console.WriteLine("Time: " + DateTime.UtcNow.ToString("o"));
 
                 var oldBlock = newBlock;
@@ -426,9 +420,22 @@ namespace FutureCash
                             {
                                 dynamic cmd = JsonConvert.DeserializeObject(sr.ReadLine());
                                 object result;
-                                if (cmd["command"] == "getblockcount")
+                                var command = cmd["command"];
+                                if (command == "getblockcount")
                                 {
                                     result = Block.BlockCount;
+                                }
+                                else if (command == "getblockhash")
+                                {
+                                    var blockheight = Convert.ToInt64(cmd["blockheight"]);
+                                    result = Block.BlocksByHeight[blockheight];
+                                }
+                                else if (command == "getblock")
+                                {
+                                    var block = Block.Blocks[(string)cmd["blockhash"]];
+                                    result = block;
+                                    //var blockhash = new UInt256((string)cmd["blockhash"]);
+                                    //result = Block.Blocks[blockhash];  // XXX need to serialize directly
                                 }
                                 else
                                 {
