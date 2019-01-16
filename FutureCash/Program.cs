@@ -19,10 +19,10 @@ namespace FutureCash
     {
         class Block
         {
-            // XXX switch this to an index of Blocks by BlockHash, plus an index of BlockHashes by BlockHeight
-            // XXX and persist it all to disk
+            // XXX persist this to disk
             public static IDictionary<long, string> BlocksByHeight = new Dictionary<long, string>();
             public static IDictionary<string, Block> Blocks = new Dictionary<string, Block>();
+
             public static long BlockCount = -1;
 
             // target hash for minimum difficulty - maximum target allowed
@@ -34,11 +34,31 @@ namespace FutureCash
             private static int BlocksPerAdjustmentComputationInterval = DifficultyAdjustmentComputationInterval / BlockInterval;
             public static int TestScalingFactor = 1;
 
+            public class BlockHeader
+            {
+                public long Nonce { get; internal set; }
+                public UInt256 ParentBlockHash { get; internal set; }
+                public DateTime Time { get; set; } = DateTime.UtcNow;
+                public UInt256 Target { get; internal set; }
+            }
+
+            public BlockHeader Header { get; } = new BlockHeader();
+
+            [JsonIgnore]
+            public long Nonce { get { return Header.Nonce; } private set { Header.Nonce = value; } }
+
+            [JsonIgnore]
+            public UInt256 ParentBlockHash { get { return Header.ParentBlockHash; } private set { Header.ParentBlockHash = value; } }
+
+            [JsonIgnore]
+            public DateTime Time { get { return Header.Time; } private set { Header.Time = value; } }
+
+            [JsonIgnore]
+            public UInt256 Target { get { return Header.Target; } private set { Header.Target = value; } }
+
             public long BlockHeight { get; private set; }
-            public long Nonce { get; private set; }
-            public UInt256 ParentBlockHash { get; private set; }
-            public DateTime Time { get; set; } = DateTime.UtcNow;
-            public UInt256 Target { get; private set; }
+
+            [JsonIgnore]
             public UInt256 Work
             {
                 get
@@ -46,6 +66,7 @@ namespace FutureCash
                     return UInt256.MaxValue / Target;
                 }
             }
+
             public UInt256 ChainWork { get; private set; }
 
             private static bool NewBlockTimeDirty = true;
@@ -76,38 +97,16 @@ namespace FutureCash
                 SetParent(parent);
             }
 
-            private dynamic Header
-            {
-                get
-                {
-                    dynamic h = new ExpandoObject();
-                    h.Nonce = Nonce;
-                    h.ParentBlockHash = ParentBlockHash.ToString();
-                    h.Time = Time.ToString("o");
-                    h.Target = Target.ToString();
-                    return h;
-                }
-            }
-
-            public string Serialize()
-            {
-                return JsonConvert.SerializeObject(Header);
-            }
-
             public override string ToString()
             {
-                dynamic data = Header;
-                data.BlockHeight = BlockHeight;
-                data.BlockHash = BlockHash.ToString();
-                data.ChainWork = ChainWork.ToString();
-                return JsonConvert.SerializeObject(data);
+                return JsonConvert.SerializeObject(this);
             }
 
             public UInt256 BlockHash
             {
                 get
                 {
-                    var buffer = Encoding.UTF8.GetBytes(Serialize());
+                    var buffer = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(Header));
                     return Hash.Sha256d(buffer);
                 }
             }
@@ -231,6 +230,25 @@ namespace FutureCash
             }
         }
 
+        public class ToStringJsonConverter : JsonConverter
+        {
+            public override bool CanConvert(Type objectType)
+            {
+                return true;
+            }
+
+            public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+            {
+                throw new NotImplementedException();
+            }
+
+            public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+            {
+                writer.WriteValue(value.ToString());
+            }
+        }
+
+        [JsonConverter(typeof(ToStringJsonConverter))]
         class UInt256 : IComparable<UInt256>
         {
             private BigInteger value;
@@ -425,8 +443,6 @@ namespace FutureCash
                                 {
                                     var block = Block.Blocks[(string)cmd["blockhash"]];
                                     result = block;
-                                    //var blockhash = new UInt256((string)cmd["blockhash"]);
-                                    //result = Block.Blocks[blockhash];  // XXX need to serialize directly
                                 }
                                 else
                                 {
