@@ -82,9 +82,9 @@ namespace FutureCash
                 {
                     dynamic h = new ExpandoObject();
                     h.Nonce = Nonce;
-                    h.ParentBlockHash = ParentBlockHash.ToHex();
+                    h.ParentBlockHash = ParentBlockHash.ToString();
                     h.Time = Time.ToString("o");
-                    h.Target = Target.ToHex();
+                    h.Target = Target.ToString();
                     return h;
                 }
             }
@@ -98,8 +98,8 @@ namespace FutureCash
             {
                 dynamic data = Header;
                 data.BlockHeight = BlockHeight;
-                data.BlockHash = BlockHash.ToHex();
-                data.ChainWork = ChainWork.ToHex();
+                data.BlockHash = BlockHash.ToString();
+                data.ChainWork = ChainWork.ToString();
                 return JsonConvert.SerializeObject(data);
             }
 
@@ -117,10 +117,6 @@ namespace FutureCash
                 Nonce = startingNonce;
                 while (BlockHash > Target)
                 {
-                    //if ((Nonce % 100000) == 0)
-                    //{
-                    //    Console.WriteLine("Invalid nonce: " + Nonce + " / Hash: " + BlockHash.ToHex());
-                    //}
                     Nonce++;
                     if (NewBlockTimeDirty)
                     {
@@ -194,7 +190,7 @@ namespace FutureCash
                     Console.WriteLine("Target went down: harder");
                 }
                 Console.WriteLine("Oldtarget/newtarget ratio as %: " + b2.Target.DivPercent(newTarget));
-                Console.WriteLine("New target: " + newTarget.ToHex());
+                Console.WriteLine("New target: " + newTarget.ToString());
                 return newTarget;
             }
 
@@ -259,11 +255,6 @@ namespace FutureCash
                 this.value = value;
             }
 
-            public override string ToString()
-            {
-                return ToHex();
-            }
-
             public int CompareTo(UInt256 other)
             {
                 return value.CompareTo(other.value);
@@ -279,7 +270,7 @@ namespace FutureCash
                 return a.value > b.value;
             }
 
-            public string ToHex()
+            public override string ToString()
             {
                 var format = "x64";
                 return value.ToString(format);
@@ -354,7 +345,7 @@ namespace FutureCash
         private static void Mine()
         {
             var newBlock = new Block();
-            Console.WriteLine("MaxHash: " + Block.MaxTarget.ToHex());
+            Console.WriteLine("MaxHash: " + Block.MaxTarget.ToString());
 
             var timer = new System.Timers.Timer(3000);
             timer.Elapsed += (Object source, ElapsedEventArgs e) => { Block.NewBlockTime = DateTime.UtcNow; };
@@ -368,7 +359,7 @@ namespace FutureCash
                 newBlock.Mine();
                 Console.WriteLine("Height: " + i);
                 Console.WriteLine("Nonce: " + newBlock.Nonce);
-                Console.WriteLine("Hash: " + newBlock.BlockHash.ToHex());
+                Console.WriteLine("Hash: " + newBlock.BlockHash.ToString());
                 Console.WriteLine("Block: " + newBlock.ToString());
                 Console.WriteLine("Time: " + DateTime.UtcNow.ToString("o"));
 
