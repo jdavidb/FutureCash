@@ -217,14 +217,22 @@ namespace FutureCash
             {
                 if (parent == null)
                 {
+                    Console.WriteLine("No parent specified - checking for existing blocks");
                     if (Blocks.Count > 0)
                     {
+                        Console.WriteLine("I have blocks - should use block " + (Blocks.Count - 1) + " as parent");
                         var hash = BlocksByHeight[Blocks.Count - 1];
+                        Console.WriteLine("Head of the chain is hash " + hash);
                         parent = Blocks[hash];
+                    }
+                    else
+                    {
+                        Console.WriteLine("I didn't see any blocks to start from, so starting a new chain");
                     }
                 }
                 if (parent == null)
                 {
+                    Console.WriteLine("parent is null; starting a new chain");
                     Target = MaxTarget;
                     ParentBlockHash = UInt256.MinValue;
                     BlockHeight = 0L;
@@ -245,29 +253,53 @@ namespace FutureCash
 
             private static bool ValidateAndStoreBlock(dynamic receivedBlock)
             {
+                Console.WriteLine("Validating a block");
                 var header = receivedBlock["Header"];
                 string parentHash = header["ParentBlockHash"];
-                if (!Blocks.ContainsKey(parentHash))
+                var isGenesis = parentHash == UInt256.MinValue.ToString();
+                if (!Blocks.ContainsKey(parentHash) && !isGenesis)
+                {
+                    Console.WriteLine("Invalid parent hash - not found");
                     return false;
-                var parent = Blocks[parentHash];
+                }
+                var parent = isGenesis ? null : Blocks[parentHash];
                 var block = new Block(parent);
                 long blockHeight = Convert.ToInt64(receivedBlock["BlockHeight"]);
                 if (block.BlockHeight != blockHeight)
+                {
+                    Console.WriteLine("Invalid block height");
                     return false;
+                }
                 var time = Convert.ToDateTime(header["Time"]);
                 // XXX validate time
                 block.Time = time;
                 string target = header["Target"];
                 if (target != block.Target.ToString())
+                {
+                    Console.WriteLine("Invalid target");
                     return false;
+                }
                 var chainWork = receivedBlock["ChainWork"];
                 if (chainWork != block.ChainWork.ToString())
+                {
+                    Console.WriteLine("Invalid ChainWork");
                     return false;
+                }
                 long nonce = Convert.ToInt64(header["Nonce"]);
                 block.Nonce = nonce;
                 string blockHash = receivedBlock["BlockHash"];
+                Console.WriteLine("Received BlockHash is " + blockHash);
+                Console.WriteLine("Calculated BlockHash is " + block.BlockHash.ToString());
                 if (blockHash != block.BlockHash.ToString())
+                {
+                    Console.WriteLine("Invalid BlockHash");
+                    Console.WriteLine("Here is the block I received " + receivedBlock.ToString());
+                    Console.WriteLine("Here is the block I have constructed during validation " + block.ToString());
                     return false;
+                }
+                // XXX Have to make sure blockhash is less than target
+                // XXX this will require converting string into UInt256
+                Console.WriteLine("Assuming that the hash is less than the target");
                 BlocksByHeight[blockHeight] = blockHash;
                 Blocks[blockHash] = block;
                 return true;
@@ -529,7 +561,8 @@ namespace FutureCash
                 var receivedBlockData = SendCommand(server, cmd3);
                 Console.WriteLine(receivedBlockData);
 
-                Block.ValidateAndStoreBlock(receivedBlockData);
+                var valid = Block.ValidateAndStoreBlock(receivedBlockData);
+                Console.WriteLine(valid ? "Valid" : "Not valid");
             }
         }
 
