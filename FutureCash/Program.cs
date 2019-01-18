@@ -26,7 +26,7 @@ namespace FutureCash
             public static long BlockCount = -1;
 
             // target hash for minimum difficulty - maximum target allowed
-            public static UInt256 MaxTarget = UInt256.MaxValue / 65536;
+            public static UInt256 MaxTarget = UInt256.MaxValue / 16384;
 
             // desired block interval in seconds
             public static int BlockInterval = 60;  // target block interval in seconds
@@ -102,12 +102,21 @@ namespace FutureCash
                 return JsonConvert.SerializeObject(this);
             }
 
+            public bool ShowHeader { get { return BlockHeight == 0; } }
+
             public UInt256 BlockHash
             {
                 get
                 {
-                    var buffer = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(Header));
-                    return Hash.Sha256d(buffer);
+                    var headerSerialization = JsonConvert.SerializeObject(Header);
+                    var buffer = Encoding.UTF8.GetBytes(headerSerialization);
+                    var hash = Hash.Sha256d(buffer);
+                    if (ShowHeader)
+                    {
+                        Console.WriteLine("Header serialization for hash computation: " + headerSerialization);
+                        Console.WriteLine("Computed hash: " + hash);
+                    }
+                    return hash;
                 }
             }
 
@@ -428,11 +437,12 @@ namespace FutureCash
 
         class Hash
         {
-            private static SHA256 sha256 = SHA256.Create();
-
             public static UInt256 Sha256d(byte[] buffer)
             {
-                return new UInt256(sha256.ComputeHash(sha256.ComputeHash(buffer)));
+                using (var sha256 = SHA256.Create())
+                {
+                    return new UInt256(sha256.ComputeHash(sha256.ComputeHash(buffer)));
+                }
             }
         }
 
@@ -446,7 +456,7 @@ namespace FutureCash
             timer.AutoReset = true;
             timer.Enabled = true;
 
-            for (int i = 0; i < 100000; i++)
+            for (int i = 0; i < 10000; i++)
             {
                 Console.WriteLine();
 
