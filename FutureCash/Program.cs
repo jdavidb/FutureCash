@@ -217,6 +217,14 @@ namespace FutureCash
             {
                 if (parent == null)
                 {
+                    if (Blocks.Count > 0)
+                    {
+                        var hash = BlocksByHeight[Blocks.Count - 1];
+                        parent = Blocks[hash];
+                    }
+                }
+                if (parent == null)
+                {
                     Target = MaxTarget;
                     ParentBlockHash = UInt256.MinValue;
                     BlockHeight = 0L;
@@ -227,6 +235,42 @@ namespace FutureCash
                 BlockHeight = parent.BlockHeight + 1L;
                 Target = ComputeNewTarget();
                 ChainWork = parent.ChainWork + Work;
+            }
+
+            public static bool ValidateAndStoreBlock(string receivedBlockData)
+            {
+                dynamic receivedBlock = JsonConvert.DeserializeObject(receivedBlockData);
+                return ValidateAndStoreBlock(receivedBlock);
+            }
+
+            private static bool ValidateAndStoreBlock(dynamic receivedBlock)
+            {
+                var header = receivedBlock["Header"];
+                string parentHash = header["ParentBlockHash"];
+                if (!Blocks.ContainsKey(parentHash))
+                    return false;
+                var parent = Blocks[parentHash];
+                var block = new Block(parent);
+                long blockHeight = Convert.ToInt64(receivedBlock["BlockHeight"]);
+                if (block.BlockHeight != blockHeight)
+                    return false;
+                var time = Convert.ToDateTime(header["Time"]);
+                // XXX validate time
+                block.Time = time;
+                string target = header["Target"];
+                if (target != block.Target.ToString())
+                    return false;
+                var chainWork = receivedBlock["ChainWork"];
+                if (chainWork != block.ChainWork.ToString())
+                    return false;
+                long nonce = Convert.ToInt64(header["Nonce"]);
+                block.Nonce = nonce;
+                string blockHash = receivedBlock["BlockHash"];
+                if (blockHash != block.BlockHash.ToString())
+                    return false;
+                BlocksByHeight[blockHeight] = blockHash;
+                Blocks[blockHash] = block;
+                return true;
             }
         }
 
@@ -375,7 +419,7 @@ namespace FutureCash
                 Console.WriteLine();
 
                 newBlock.Mine();
-                Console.WriteLine("Height: " + i);
+                Console.WriteLine("Height: " + newBlock.BlockHeight);
                 Console.WriteLine("Nonce: " + newBlock.Nonce);
                 Console.WriteLine("Hash: " + newBlock.BlockHash.ToString());
                 Console.WriteLine("Block: " + newBlock.ToString());
@@ -482,10 +526,11 @@ namespace FutureCash
                 Console.WriteLine(hash);
 
                 var cmd3 = new { command = "getblock", blockhash = hash };
-                var results3 = SendCommand(server, cmd3);
-                Console.WriteLine(results3);
+                var receivedBlockData = SendCommand(server, cmd3);
+                Console.WriteLine(receivedBlockData);
+
+                Block.ValidateAndStoreBlock(receivedBlockData);
             }
-            Environment.Exit(0);
         }
 
         private static IPEndPoint ParseIPEndPoint(string endpoint, int defaultPort = 0)
