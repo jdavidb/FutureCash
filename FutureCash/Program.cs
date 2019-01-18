@@ -455,19 +455,37 @@ namespace FutureCash
             }).Start();
         }
 
-        private static void ConnectAndSync(IPEndPoint server)
+        private static string SendCommand(IPEndPoint server, object cmd)
         {
             using (var tcpClient = new TcpClient(server.Address.ToString(), server.Port))
             using (var ns = tcpClient.GetStream())
             using (var sr = new StreamReader(ns))
             using (var sw = new StreamWriter(ns))
             {
-                var cmd = new { command = "getblockcount" };
                 sw.WriteLine(JsonConvert.SerializeObject(cmd));
                 sw.Flush();
-                var line = sr.ReadLine();
-                Console.WriteLine(line);
+                return sr.ReadToEnd();
             }
+        }
+
+        private static void ConnectAndSync(IPEndPoint server)
+        {
+            var cmd = new { command = "getblockcount" };
+            long blockcount = Convert.ToInt64(SendCommand(server, cmd));
+            Console.WriteLine("Need to sync up to " + blockcount + " blocks");
+
+            for (long c = 0; c <= blockcount; c++)
+            {
+                var cmd2 = new { command = "getblockhash", blockheight = c };
+                var results = SendCommand(server, cmd2);
+                var hash = JsonConvert.DeserializeObject(results);
+                Console.WriteLine(hash);
+
+                var cmd3 = new { command = "getblock", blockhash = hash };
+                var results3 = SendCommand(server, cmd3);
+                Console.WriteLine(results3);
+            }
+            Environment.Exit(0);
         }
 
         private static IPEndPoint ParseIPEndPoint(string endpoint, int defaultPort = 0)
