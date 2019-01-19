@@ -26,7 +26,7 @@ namespace FutureCash
             public static long BlockCount = -1;
 
             // target hash for minimum difficulty - maximum target allowed
-            public static UInt256 MaxTarget = UInt256.MaxValue / 16384;
+            public static UInt256 MaxTarget = UInt256.MaxValue / 65536;
 
             // desired block interval in seconds
             public static int BlockInterval = 60;  // target block interval in seconds
@@ -102,8 +102,6 @@ namespace FutureCash
                 return JsonConvert.SerializeObject(this);
             }
 
-            public bool ShowHeader { get { return BlockHeight == 0; } }
-
             public UInt256 BlockHash
             {
                 get
@@ -111,11 +109,6 @@ namespace FutureCash
                     var headerSerialization = JsonConvert.SerializeObject(Header);
                     var buffer = Encoding.UTF8.GetBytes(headerSerialization);
                     var hash = Hash.Sha256d(buffer);
-                    if (ShowHeader)
-                    {
-                        Console.WriteLine("Header serialization for hash computation: " + headerSerialization);
-                        Console.WriteLine("Computed hash: " + hash);
-                    }
                     return hash;
                 }
             }
@@ -306,9 +299,10 @@ namespace FutureCash
                     Console.WriteLine("Here is the block I have constructed during validation " + block.ToString());
                     return false;
                 }
-                // XXX Have to make sure blockhash is less than target
-                // XXX this will require converting string into UInt256
-                Console.WriteLine("Assuming that the hash is less than the target");
+                if (block.BlockHash > block.Target)
+                {
+                    Console.WriteLine("BlockHash does not meet target");
+                }
                 BlocksByHeight[blockHeight] = blockHash;
                 Blocks[blockHash] = block;
                 return true;
